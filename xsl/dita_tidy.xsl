@@ -192,70 +192,71 @@
 
 
    <!-- BEGIN templates for mode populate-wrapped-text-buffer -->
-   <xsl:template match="text()" mode="populate-wrapped-text-buffer">
-      <!-- If the text() contains significant white-space or something
-         other than white-space, then wrap it with temporary element
-         <rawtext wrapWithText="yes">
-      -->
-      <xsl:choose>
-      <!-- Ignore white-space only text() when it is the first node. -->
-      <xsl:when test="normalize-space(.) = '' and position() = 1">
-        <!-- Ignored -->
-      </xsl:when>
-      <!-- Ignore white-space only text() when it is the last node. -->
-      <xsl:when test="normalize-space(.) = '' and position() = last()">
-        <!-- Ignored -->
-      </xsl:when>
-      <!-- Ignore white-space only text() when it is the only node between
-           between two block elements. -->
-      <xsl:when
-        test="
-          normalize-space(.) = '' and
-          preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and
-          following-sibling::*[1] and df:isBlock(following-sibling::*[1])">
-        <!-- Ignored -->
-      </xsl:when>
-      <!-- Strip leading and trailing spaces when text() is the only node between
-           between two block elements. -->
-      <xsl:when
-        test="
-        preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and
-        following-sibling::*[1] and df:isBlock(following-sibling::*[1])">
-        <xsl:element name="rawtext">
-          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
-          <xsl:value-of select="replace(., '^\s+(.*)\s+$', '$1')"/>
-        </xsl:element>
-      </xsl:when>
-      <!-- Strip leading spaces when text() is the first node or when text()
-           is preceded by a block element. -->
-      <xsl:when
-        test="
-          (position() = 1 and matches(., '^\s+')) or
-          (preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and matches(., '^\s+'))">
-        <xsl:element name="rawtext">
-          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
-          <xsl:value-of select="replace(., '^\s+', '')"/>
-        </xsl:element>
-      </xsl:when>
-      <!-- Strip trailing spaces when text() is the last node or when text()
-           is followed by a block element. -->
-      <xsl:when
-        test="
-          (position() = last() and matches(., '\s+$')) or
-          (following-sibling::*[1] and df:isBlock(following-sibling::*[1]) and matches(., '\s+$'))">
-        <xsl:element name="rawtext">
-          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
-          <xsl:value-of select="replace(., '\s+$', '')"/>
-        </xsl:element>
-      </xsl:when>
-      <xsl:otherwise>
-        <xsl:element name="rawtext">
-          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
-          <xsl:value-of select="."/>
-        </xsl:element>
-      </xsl:otherwise>
-    </xsl:choose>
-   </xsl:template>
+    <xsl:template match="text()" mode="populate-wrapped-text-buffer">
+        <!-- If the text() contains significant white-space or something
+             other than white-space, then wrap it with temporary element
+             <rawtext wrapWithText="yes">
+        -->
+        <xsl:choose>
+            <!-- Ignore white-space only text() when it is the first node. -->
+            <xsl:when test="normalize-space(.) = '' and position() = 1">
+                <!-- Ignore this node -->
+            </xsl:when>
+            <!-- Ignore white-space only text() when it is the last node. -->
+            <xsl:when test="normalize-space(.) = '' and position() = last()">
+                <!-- Ignore this node -->
+            </xsl:when>
+            <!-- Ignore white-space only text() when it is the only node between
+                 between two block elements. -->
+            <xsl:when
+                test="
+                    normalize-space(.) = '' and
+                    preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and
+                    following-sibling::*[1] and df:isBlock(following-sibling::*[1])">
+                <!-- Ignore this node -->
+            </xsl:when>
+            <!-- Strip leading and trailing spaces when text() is the only node between
+                 between two block elements, then wrap the text() -->
+            <xsl:when
+                test="
+                    preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and
+                    following-sibling::*[1] and df:isBlock(following-sibling::*[1])">
+                <xsl:element name="rawtext">
+                    <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+                    <xsl:value-of select="replace(., '^\s+(.*)\s+$', '$1')"/>
+                </xsl:element>
+            </xsl:when>
+            <!-- Strip leading spaces when text() is the first node or when text()
+                 is preceded by a block element, then wrap the text(). -->
+            <xsl:when
+                test="
+                    (position() = 1 and matches(., '^\s+')) or
+                    (preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and matches(., '^\s+'))">
+                <xsl:element name="rawtext">
+                    <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+                    <xsl:value-of select="replace(., '^\s+', '')"/>
+                </xsl:element>
+            </xsl:when>
+            <!-- Strip trailing spaces when text() is the last node or when text()
+                 is followed by a block element, then wrap the text(). -->
+            <xsl:when
+                test="
+                    (position() = last() and matches(., '\s+$')) or
+                    (following-sibling::*[1] and df:isBlock(following-sibling::*[1]) and matches(., '\s+$'))">
+                <xsl:element name="rawtext">
+                    <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+                    <xsl:value-of select="replace(., '\s+$', '')"/>
+                </xsl:element>
+            </xsl:when>
+            <!-- No whiteshpace handling, just wrap the text(). -->
+            <xsl:otherwise>
+                <xsl:element name="rawtext">
+                    <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+                    <xsl:value-of select="."/>
+                </xsl:element>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
 
    <xsl:template match="comment()" mode="populate-wrapped-text-buffer">
       <!-- Preserve XML comments -->
