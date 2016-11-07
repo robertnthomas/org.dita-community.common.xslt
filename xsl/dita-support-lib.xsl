@@ -44,10 +44,12 @@
        blocks (e.g., shortdesc) -->
   <xsl:variable name="baseBlockTypes"
     select="'^dl^fig^image^lines^lq^note^object^ol^p^pre^simpletable^sl^table^title^ul^shortdesc^'"/>
-
+  
+  <!-- List of base types that are inherently inlines -->
   <xsl:variable name="baseInlineTypes"
     select="'^alt^boolean^cite^data^data-about^draft-comment^fn^foreign^image^index-base^indexterm^indextermref^keyword^ph^q^required-cleanup^state^term^text^tm^unknown^xref^'"/>
-
+  
+  <!-- List of base types from which to wrap mixed content with <p> -->
   <xsl:variable name="baseToWrap"
     select="'^abstract^bodydiv^dd^entry^example^itemgroup^li^lines^lq^note^section^sectiondiv^stentry^'"/>
 
@@ -1116,52 +1118,52 @@
         </xsl:choose>
     </xsl:function>
 
-   <xsl:function name="df:isInline" as="xs:boolean">
-      <xsl:param name="context"/>
-      <xsl:variable name="result" as="xs:boolean">
-         <xsl:choose>
-            <!-- Don't treat task/cmd as an inline even though it is a specializtion
-             of topic/ph. -->
-            <xsl:when test="df:class($context, 'task/cmd')">
-               <xsl:value-of select="false()"/>
-            </xsl:when>
-            <!-- Treat image[@placement='break'] as block -->
-            <xsl:when test="$context/@placement = 'break'">
-               <xsl:value-of select="false()"/>
-            </xsl:when>
-            <xsl:when test="contains($context/@class, ' topic/')">
-          <xsl:variable name="baseType"
-            select="substring-after(tokenize($context/@class, ' ')[2], '/')"/>
-          <xsl:sequence select="contains($baseInlineTypes, concat('^', $baseType, '^'))"/>
-        </xsl:when>
-        <xsl:otherwise>
-               <xsl:value-of select="false()"/>
-            </xsl:otherwise>
-         </xsl:choose>
-      </xsl:variable>
-      <xsl:sequence select="$result"/>
-   </xsl:function>
+    <xsl:function name="df:isInline" as="xs:boolean">
+        <xsl:param name="context"/>
+        <xsl:variable name="result" as="xs:boolean">
+            <xsl:choose>
+                <!-- Don't treat task/cmd as an inline even though it is a specializtion
+                     of topic/ph -->
+                <xsl:when test="df:class($context, 'task/cmd')">
+                    <xsl:value-of select="false()"/>
+                </xsl:when>
+                <!-- Treat image[@placement='break'] as a block -->
+                <xsl:when test="$context/@placement = 'break'">
+                    <xsl:value-of select="false()"/>
+                </xsl:when>
+                <xsl:when test="contains($context/@class, ' topic/')">
+                    <xsl:variable name="baseType"
+                        select="substring-after(tokenize($context/@class, ' ')[2], '/')"/>
+                    <xsl:sequence select="contains($baseInlineTypes, concat('^', $baseType, '^'))"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="false()"/>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+        <xsl:sequence select="$result"/>
+    </xsl:function>
 
 
-   <!-- RESTRICTION: These elements must allow <p> as a child element. -->
-   <!-- Note that this function will also match an element that is a
-        specialization of any of these classes -->
-   <xsl:function name="df:isWrapMixed" as="xs:boolean">
-      <xsl:param name="context"/>
-      <xsl:variable name="result" as="xs:boolean">
-      <xsl:choose>
-        <xsl:when test="contains($context/@class, ' topic/')">
-          <xsl:variable name="baseType"
-            select="substring-after(tokenize($context/@class, ' ')[2], '/')"/>
-          <xsl:sequence select="contains($baseToWrap, concat('^', $baseType, '^'))"/>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:sequence select="false()"/>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-      <xsl:sequence select="$result"/>
-   </xsl:function>
+    <!-- RESTRICTION: These elements must allow <p> as a child element -->
+    <!-- Note that this function will also match an element that is a
+         specialization of any of these classes -->
+    <xsl:function name="df:isWrapMixed" as="xs:boolean">
+        <xsl:param name="context"/>
+        <xsl:variable name="result" as="xs:boolean">
+            <xsl:choose>
+                <xsl:when test="contains($context/@class, ' topic/')">
+                    <xsl:variable name="baseType"
+                        select="substring-after(tokenize($context/@class, ' ')[2], '/')"/>
+                    <xsl:sequence select="contains($baseToWrap, concat('^', $baseType, '^'))"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:sequence select="false()"/>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+        <xsl:sequence select="$result"/>
+    </xsl:function>
 
 
   <xsl:function name="df:inChunk" as="xs:boolean">
