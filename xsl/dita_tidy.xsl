@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-   xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/"
-   xmlns:df="http://dita2indesign.org/dita/functions"
-   exclude-result-prefixes="df"
-   version="2.0">
+  xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/"
+  xmlns:df="http://dita2indesign.org/dita/functions" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  exclude-result-prefixes="df ditaarch" version="2.0">
 <!-- This transform takes DITA content and wraps mixed content with the <p>
      element for all elements identified by the ts:isWrapMixed() boolean
      function. The ts:isWrapMixed() function definition is in file
@@ -34,18 +33,15 @@
      Author: Bob Thomas, bob.thomas@tagsmiths.com
 -->
 
-   <!-- currentFile is unused. It could be used with the ant 'xslt' task's
-      filenameparameter attribute. -->
-   <xsl:param name="currentFile"/>
+   <!--  Depends on these modules:  -->
+   <xsl:import href="dita-support-lib.xsl"/>
+   <xsl:import href="relpath_util.xsl"/>
+   <!-- outputfile can be used in conjunction with the ant 'xslt' task's
+      filenameparameter attribute when you wish to process several topics. -->
+   <xsl:param name="outputfile">/home/rnt/Testing/DitaTidy/out.xml</xsl:param>
    <xsl:param name="preservePIs">yes</xsl:param>
    <xsl:param name="preserveComments">yes</xsl:param>
-   <!-- For applications that use the ant 'xslt' task to process several topics,
-      you may wish to change outputfile from a paramater to a variable that uses
-      the value of the currentFile parameter as part of its name -->
-   <!--<xsl:param name="outputfile">out.xml</xsl:param>-->
-   <xsl:param name="outputfile">/home/rnt/sandbox/foo.xml</xsl:param>
 
-   <xsl:strip-space elements="*"/>
    <xsl:preserve-space elements="pre lines codeblock"/>
 
    <xsl:output method="xml" indent="no"/>
@@ -68,7 +64,10 @@
             <xsl:when test="$rootElement = 'topic'">
                <xsl:text>-//OASIS//DTD DITA Topic//EN</xsl:text>
             </xsl:when>
-            <xsl:when test="$rootElement = 'dita'">
+            <xsl:when test="$rootElement = 'troubleshooting'">
+          <xsl:text>-//OASIS//DTD DITA Troubleshooting//EN</xsl:text>
+        </xsl:when>
+        <xsl:when test="$rootElement = 'dita'">
                <xsl:text>-//OASIS//DTD DITA Composite//EN</xsl:text>
             </xsl:when>
          </xsl:choose>
@@ -87,7 +86,10 @@
             <xsl:when test="$rootElement = 'topic'">
                <xsl:text>urn:topic.dtd</xsl:text>
             </xsl:when>
-            <xsl:when test="$rootElement = 'dita'">
+            <xsl:when test="$rootElement = 'troubleshooting'">
+          <xsl:text>urn:troubleshooting.dtd</xsl:text>
+        </xsl:when>
+        <xsl:when test="$rootElement = 'dita'">
                <xsl:text>urn:ditabase.dtd</xsl:text>
             </xsl:when>
          </xsl:choose>
@@ -99,11 +101,13 @@
    </xsl:template>
 
    <xsl:template match="*">
-      <xsl:element name="{name(.)}">
+      <!--<xsl:comment>START <xsl:value-of select="name()"/></xsl:comment>-->
+    <xsl:element name="{name(.)}">
          <xsl:call-template name="output-attrs"/>
          <xsl:apply-templates/>
       </xsl:element>
-   </xsl:template>
+   <!--<xsl:comment>END <xsl:value-of select="name()"/></xsl:comment>-->
+  </xsl:template>
 
    <xsl:template match="*[df:isWrapMixed(.)]">
       <xsl:call-template name="wrap-mixed-content"/>
@@ -119,7 +123,12 @@
       <xsl:variable name="wrapped-text-buffer">
          <xsl:apply-templates mode="populate-wrapped-text-buffer"/>
       </xsl:variable>
-      <xsl:element name="{name(.)}">
+      <!--<xsl:result-document method="xml" indent="no" href="/home/rnt/Testing/DitaTidy/wtb.xml">
+      <foo>
+        <xsl:apply-templates mode="populate-wrapped-text-buffer"/>
+      </foo>
+    </xsl:result-document>-->
+    <xsl:element name="{name(.)}">
          <xsl:call-template name="output-attrs"/>
          <!-- Iterate over the top-level nodes in wrapped-text-buffer, wrapping
               all contiguous *[@wrapWithP='yes'] in a single <p> element. The
@@ -153,11 +162,11 @@
    <xsl:template name="output-attrs">
       <xsl:for-each select="@*">
          <xsl:choose>
-            <xsl:when test="name(.)='class'"/>
-            <xsl:when test="starts-with(name(.),'ish')"/>
-            <xsl:when test="name(.)='wrapWithP'"/>
+            <xsl:when test="name(.) = 'class'"/>
+            <xsl:when test="starts-with(name(.), 'ish')"/>
+            <xsl:when test="name(.) = 'wrapWithP'"/>
             <xsl:when test="matches(name(.), 'ditaarch')"/>
-            <xsl:when test="name(.)='domains'"/>
+            <xsl:when test="name(.) = 'domains'"/>
             <xsl:otherwise>
                <xsl:attribute name="{name(.)}">
                   <xsl:value-of select="."/>
@@ -165,10 +174,6 @@
             </xsl:otherwise>
          </xsl:choose>
       </xsl:for-each>
-   </xsl:template>
-
-   <xsl:template match="text()">
-      <xsl:value-of select="normalize-space(.)"/>
    </xsl:template>
 
    <xsl:template match="comment()">
@@ -188,15 +193,68 @@
 
    <!-- BEGIN templates for mode populate-wrapped-text-buffer -->
    <xsl:template match="text()" mode="populate-wrapped-text-buffer">
-      <!-- If the text() contains something other than white-space,
-         then wrap it with temporary element <rawtext wrapWithText="yes">
+      <!-- If the text() contains significant white-space or something
+         other than white-space, then wrap it with temporary element
+         <rawtext wrapWithText="yes">
       -->
-      <xsl:if test="normalize-space(.) != ''">
-         <xsl:element name="rawtext">
-            <xsl:attribute name="wrapWithP">yes</xsl:attribute>
-            <xsl:value-of select="normalize-space(.)"/>
-         </xsl:element>
-      </xsl:if>
+      <xsl:choose>
+      <!-- Ignore white-space only text() when it is the first node. -->
+      <xsl:when test="normalize-space(.) = '' and position() = 1">
+        <!-- Ignored -->
+      </xsl:when>
+      <!-- Ignore white-space only text() when it is the last node. -->
+      <xsl:when test="normalize-space(.) = '' and position() = last()">
+        <!-- Ignored -->
+      </xsl:when>
+      <!-- Ignore white-space only text() when it is the only node between
+           between two block elements. -->
+      <xsl:when
+        test="
+          normalize-space(.) = '' and
+          preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and
+          following-sibling::*[1] and df:isBlock(following-sibling::*[1])">
+        <!-- Ignored -->
+      </xsl:when>
+      <!-- Strip leading and trailing spaces when text() is the only node between
+           between two block elements. -->
+      <xsl:when
+        test="
+        preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and
+        following-sibling::*[1] and df:isBlock(following-sibling::*[1])">
+        <xsl:element name="rawtext">
+          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+          <xsl:value-of select="replace(., '^\s+(.*)\s+$', '$1')"/>
+        </xsl:element>
+      </xsl:when>
+      <!-- Strip leading spaces when text() is the first node or when text()
+           is preceded by a block element. -->
+      <xsl:when
+        test="
+          (position() = 1 and matches(., '^\s+')) or
+          (preceding-sibling::*[1] and df:isBlock(preceding-sibling::*[1]) and matches(., '^\s+'))">
+        <xsl:element name="rawtext">
+          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+          <xsl:value-of select="replace(., '^\s+', '')"/>
+        </xsl:element>
+      </xsl:when>
+      <!-- Strip trailing spaces when text() is the last node or when text()
+           is followed by a block element. -->
+      <xsl:when
+        test="
+          (position() = last() and matches(., '\s+$')) or
+          (following-sibling::*[1] and df:isBlock(following-sibling::*[1]) and matches(., '\s+$'))">
+        <xsl:element name="rawtext">
+          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+          <xsl:value-of select="replace(., '\s+$', '')"/>
+        </xsl:element>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="rawtext">
+          <xsl:attribute name="wrapWithP">yes</xsl:attribute>
+          <xsl:value-of select="."/>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
    </xsl:template>
 
    <xsl:template match="comment()" mode="populate-wrapped-text-buffer">
@@ -240,33 +298,11 @@
    <!-- BEGIN templates for mode wrap -->
    <!-- Only elements previously identified as inlines are submitted with mode "wrap".-->
    <xsl:template match="*" mode="wrap">
-      <!-- Spacing around inline elements is absorbed during paragraph wrapping. 
-           Threfore, a space is inserted when the inline is not the first child.
-      -->
-      <xsl:if test="not(position()=1)">
-         <xsl:text>&#x20;</xsl:text>
-      </xsl:if>
       <xsl:apply-templates select="."/>
    </xsl:template>
 
    <xsl:template match="rawtext" mode="wrap">
-      <xsl:choose>
-         <!-- This element's position() context is with respect to the
-                 current-grouping-key() which is often different than the
-                 original text() node's position in its parent.
-            -->
-         <xsl:when test="position()=1">
-            <!-- No leading space needed. -->
-            <xsl:value-of select="normalize-space(.)"/>
-         </xsl:when>
-         <xsl:otherwise>
-            <!-- Stuffs a space character in front whenever the
-                 first charcter is not associated with punctuation.
-            -->
-            <xsl:value-of
-               select="replace(normalize-space(.), '^([^.^,^;^:^?^!^)^\]^}^>^\-])', ' $1', 'i')"/>
-         </xsl:otherwise>
-      </xsl:choose>
+      <xsl:apply-templates/>
    </xsl:template>
 
    <xsl:template match="rawcomment" mode="wrap">
