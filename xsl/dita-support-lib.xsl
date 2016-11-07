@@ -43,8 +43,13 @@
        well as other elements that are also normally or always presented as
        blocks (e.g., shortdesc) -->
   <xsl:variable name="baseBlockTypes"
-    select="'^dl^fig^image^lines^lq^note^object^ol^p^pre^simpletable^sl^table^ul^shortdesc^'"
-  />
+    select="'^dl^fig^image^lines^lq^note^object^ol^p^pre^simpletable^sl^table^title^ul^shortdesc^'"/>
+
+  <xsl:variable name="baseInlineTypes"
+    select="'^alt^boolean^cite^data^data-about^draft-comment^fn^foreign^image^index-base^indexterm^indextermref^keyword^ph^q^required-cleanup^state^term^text^tm^unknown^xref^'"/>
+
+  <xsl:variable name="baseToWrap"
+    select="'^abstract^bodydiv^dd^entry^example^itemgroup^li^lines^lq^note^section^sectiondiv^stentry^'"/>
 
   <xsl:template name="resolve-mapref">
     <xsl:variable name="mapUri" select="@href" as="xs:string"/>
@@ -1112,44 +1117,24 @@
     </xsl:function>
 
    <xsl:function name="df:isInline" as="xs:boolean">
-      <xsl:param name="elem"/>
+      <xsl:param name="context"/>
       <xsl:variable name="result" as="xs:boolean">
          <xsl:choose>
             <!-- Don't treat task/cmd as an inline even though it is a specializtion
-             of topic/ph. Add other such exceptions here, as needed. -->
-            <xsl:when test="df:class($elem, 'task/cmd')">
+             of topic/ph. -->
+            <xsl:when test="df:class($context, 'task/cmd')">
                <xsl:value-of select="false()"/>
             </xsl:when>
-            <!-- Classes that are more likely to occur have been put near the front
-            so that the XSLT processor can exit the test sooner. Note that this function
-            will also match an element that is a specialization of any of these classes
-            (except for <cmd>). -->
-            <xsl:when
-               test="df:class($elem, 'topic/ph')
-               or df:class($elem, 'topic/indexterm')
-               or df:class($elem, 'topic/keyword')
-               or df:class($elem, 'topic/xref')
-               or df:class($elem, 'topic/alt')
-               or df:class($elem, 'topic/boolean')
-               or df:class($elem, 'topic/cite')
-               or df:class($elem, 'topic/data')
-               or df:class($elem, 'topic/data-about')
-               or df:class($elem, 'topic/draft-comment')
-               or df:class($elem, 'topic/fn')
-               or df:class($elem, 'topic/foreign')
-               or df:class($elem, 'topic/image')
-               or df:class($elem, 'topic/index-base')
-               or df:class($elem, 'topic/indextermref')
-               or df:class($elem, 'topic/q')
-               or df:class($elem, 'topic/required-cleanup')
-               or df:class($elem, 'topic/state')
-               or df:class($elem, 'topic/term')
-               or df:class($elem, 'topic/text')
-               or df:class($elem, 'topic/tm')
-               or df:class($elem, 'topic/unknown')">
-               <xsl:value-of select="true()"/>
+            <!-- Treat image[@placement='break'] as block -->
+            <xsl:when test="$context/@placement = 'break'">
+               <xsl:value-of select="false()"/>
             </xsl:when>
-            <xsl:otherwise>
+            <xsl:when test="contains($context/@class, ' topic/')">
+          <xsl:variable name="baseType"
+            select="substring-after(tokenize($context/@class, ' ')[2], '/')"/>
+          <xsl:sequence select="contains($baseInlineTypes, concat('^', $baseType, '^'))"/>
+        </xsl:when>
+        <xsl:otherwise>
                <xsl:value-of select="false()"/>
             </xsl:otherwise>
          </xsl:choose>
@@ -1162,24 +1147,19 @@
    <!-- Note that this function will also match an element that is a
         specialization of any of these classes -->
    <xsl:function name="df:isWrapMixed" as="xs:boolean">
-      <xsl:param name="elem"/>
-      <xsl:variable name="result"
-         select="
-         df:class($elem, 'topic/abstract') or
-         df:class($elem, 'topic/bodydiv') or
-         df:class($elem, 'topic/dd') or
-         df:class($elem, 'topic/entry') or
-         df:class($elem, 'topic/example') or
-         df:class($elem, 'topic/itemgroup') or
-         df:class($elem, 'topic/li') or
-         df:class($elem, 'topic/lines') or
-         df:class($elem, 'topic/lq') or
-         df:class($elem, 'topic/note') or
-         df:class($elem, 'topic/section') or
-         df:class($elem, 'topic/sectiondiv') or
-         df:class($elem, 'topic/stentry')
-         "
-         as="xs:boolean"/>
+      <xsl:param name="context"/>
+      <xsl:variable name="result" as="xs:boolean">
+      <xsl:choose>
+        <xsl:when test="contains($context/@class, ' topic/')">
+          <xsl:variable name="baseType"
+            select="substring-after(tokenize($context/@class, ' ')[2], '/')"/>
+          <xsl:sequence select="contains($baseToWrap, concat('^', $baseType, '^'))"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:sequence select="false()"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
       <xsl:sequence select="$result"/>
    </xsl:function>
 
